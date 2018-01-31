@@ -26,6 +26,7 @@ var watson = require('watson-developer-cloud');
 var uuid = require('uuid');
 var bundleUtils = require('./config/bundle-utils');
 var os = require('os');
+var request = require('superagent');
 
 var ONE_HOUR = 3600000;
 var TWENTY_SECONDS = 20000;
@@ -277,8 +278,38 @@ app.post('/api/classify', app.upload.single('images_file'), function(req, res) {
   // run the 3 classifiers asynchronously and combine the results
   async.parallel(methods.map(function(method) {
     var fn = visualRecognition[method].bind(visualRecognition, params);
-    if (method === 'recognizeText' || method === 'detectFaces') {
+    if (method === 'recognizeText') {
       return async.reflect(async.timeout(fn, TWENTY_SECONDS));
+    } else if (method === 'detectFaces') {
+      return async.reflect(async.timeout((callback) => {
+        var api_key = null
+        if(process.env.VCAP_SERVICES){
+          var vcap = JSON.parse(process.env.VCAP_SERVICES)
+          Object.keys(vcap).forEach((key) => {
+            vcap[key].forEach((thing) => {
+              if(thing.name === 'visual-recognition-service'){
+                api_key = thing.credentials.api_key;
+              }
+            })
+          })
+        } else {
+          api_key = process.env.VISUAL_RECOGNITION_API_KEY
+        }
+        var req = request.post('https://gateway-a.watsonplatform.net/visual-recognition/api/v3/detect_faces');
+        req.query({api_key: api_key});
+        req.query({version: '2016-05-17'});
+        if(params.images_file) {
+          req.attach('images_file', params.images_file);
+        } else {
+          req.query({url: params.url});
+        }
+        req.end(function(err, response) {
+            if (err) {
+                callback(err)
+            }
+            callback(null, JSON.parse(response.text))
+        });
+      }, TWENTY_SECONDS));
     } else {
       return async.reflect(fn);
     }
