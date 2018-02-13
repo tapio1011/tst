@@ -4,7 +4,7 @@ var vcapServices = require('vcap_services');
 module.exports.detectFaces = function(params, callback) {
   var api_key = null
   if(process.env.VCAP_SERVICES) {
-    var credentials = vcapServices.getCredentials('watson_vision_combined', null, 'visual-recognition-service')
+    var credentials = vcapServices.getCredentials('watson_vision_combined')
     api_key = credentials.api_key
   } else {
     api_key = process.env.VISUAL_RECOGNITION_API_KEY
