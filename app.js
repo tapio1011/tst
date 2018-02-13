@@ -26,7 +26,6 @@ var watson = require('watson-developer-cloud');
 var uuid = require('uuid');
 var bundleUtils = require('./config/bundle-utils');
 var os = require('os');
-var vcapServices = require('vcap_services');
 var detectFaces = require('./modules/detect-faces')
 
 var ONE_HOUR = 3600000;
@@ -282,14 +281,6 @@ app.post('/api/classify', app.upload.single('images_file'), function(req, res) {
     if (method === 'recognizeText') {
       return async.reflect(async.timeout(fn, TWENTY_SECONDS));
     } else if (method === 'detectFaces') {
-      var api_key = null
-      if(process.env.VCAP_SERVICES) {
-        var credentials = vcapServices.getCredentials('watson_vision_combined', null, 'visual-recognition-service')
-        api_key = credentials.api_key
-      } else {
-        api_key = process.env.VISUAL_RECOGNITION_API_KEY
-      }
-      params.api_key = api_key
       return async.reflect(async.timeout((callback) => {detectFaces.detectFaces(params, callback)}, TWENTY_SECONDS));
     } else {
       return async.reflect(fn);
